@@ -1,0 +1,14 @@
+{
+  "name": "முத்து தமிழ் காலண்டர்",
+  "short_name": "முத்து காலண்டர்",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#DCD2B8",
+  "theme_color": "#4A1215",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

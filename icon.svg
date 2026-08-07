@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#4A1215"/>
+  <rect x="56" y="120" width="400" height="320" rx="16" fill="#FBF6E8"/>
+  <rect x="56" y="120" width="400" height="70" rx="16" fill="#B7202E"/>
+  <rect x="56" y="174" width="400" height="16" fill="#B7202E"/>
+  <circle cx="150" cy="100" r="18" fill="#A67C27"/>
+  <circle cx="362" cy="100" r="18" fill="#A67C27"/>
+  <rect x="140" y="60" width="20" height="60" rx="10" fill="#A67C27"/>
+  <rect x="352" y="60" width="20" height="60" rx="10" fill="#A67C27"/>
+  <text x="256" y="360" font-family="Georgia, serif" font-weight="bold" font-size="190" fill="#2B1810" text-anchor="middle">௧</text>
+</svg>
