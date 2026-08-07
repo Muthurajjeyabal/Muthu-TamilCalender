@@ -1251,6 +1251,12 @@ function PanchangamApp() {
   const [deityId, setDeityId] = useState("perumal");
   const [customPhoto, setCustomPhoto] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hintVisible, setHintVisible] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHintVisible(false), 2800);
+    return () => clearTimeout(t);
+  }, []);
   const [deityPickerOpen, setDeityPickerOpen] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -1429,32 +1435,27 @@ function PanchangamApp() {
         }}>☰</button>
 
         {showCustomPhoto ? (
-          <>
-            <img src={customPhoto} alt="" style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-            }} />
-            <div style={{
-              position: "absolute", left: 0, right: 0, bottom: 0, height: "40%",
-              background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.6))",
-            }} />
-            <div style={{
-              position: "relative", fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.gold,
-              marginTop: "auto", marginBottom: 12, background: "rgba(0,0,0,0.35)", padding: "4px 12px", borderRadius: 20,
-            }}>
-              தொட்டு படத்தை மாற்றவும்
-            </div>
-          </>
+          <img src={customPhoto} alt="" style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+          }} />
         ) : (
           <>
             <span style={{ fontSize: Math.min(heroH * 0.42, 110), filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.4))" }}>{deity.symbol}</span>
             <div style={{ fontFamily: "'Tiro Tamil', serif", fontSize: 22, color: COLORS.paper, marginTop: 4, fontWeight: 700 }}>
               {deity.name}
             </div>
-            <div style={{ fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.gold, marginTop: 4 }}>
-              தொட்டு படத்தை மாற்றவும்
-            </div>
           </>
         )}
+
+        <div style={{
+          position: "absolute", left: 0, right: 0, bottom: 14, display: "flex", justifyContent: "center",
+          opacity: hintVisible ? 1 : 0, transition: "opacity 0.8s ease", pointerEvents: "none",
+        }}>
+          <span style={{
+            fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.gold,
+            background: "rgba(0,0,0,0.4)", padding: "4px 12px", borderRadius: 20,
+          }}>தொட்டு படத்தை மாற்றவும்</span>
+        </div>
       </div>
 
       {/* ── Content: other half of the screen ── */}
