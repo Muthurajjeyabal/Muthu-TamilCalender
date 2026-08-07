@@ -1,32 +1,4 @@
-<!DOCTYPE html>
-<html lang="ta">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>முத்து தமிழ் காலண்டர்</title>
-<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
-<style>
-  html, body { margin: 0; padding: 0; background:#DCD2B8; }
-  #root { min-height: 100vh; }
-  #boot-msg { font-family: sans-serif; padding: 24px; color:#4A1215; white-space:pre-wrap; }
-</style>
-</head>
-<body>
-<div id="root"><div id="boot-msg">ஏற்றுகிறது…</div></div>
-<script>
-  window.addEventListener("error", function (e) {
-    var el = document.getElementById("root");
-    if (el) {
-      el.innerHTML = "<div id='boot-msg'>தவறு (error):\n" +
-        (e.message || "unknown") + "\n" + (e.filename || "") + ":" + (e.lineno || "") + "</div>";
-    }
-  });
-</script>
-<script type="text/babel" data-presets="react">
-const { useState, useMemo, useEffect, useRef } = React;
-
+import React, { useState, useMemo, useEffect, useRef } from "react";
 
 /* ---------------------------------------------------------------
    ஜோதிட கணக்கீடுகள் (Astronomy helpers)
@@ -1244,7 +1216,7 @@ function MonthGrid({ year, month, cityKey, onPick, selected }) {
   );
 }
 
-function PanchangamApp() {
+export default function PanchangamApp() {
   const [date, setDate] = useState(new Date());
   const [cityKey, setCityKey] = useState("madurai");
   const [view, setView] = useState("day"); // "day" | "month" | "reminder" | "spiritual"
@@ -1645,10 +1617,3 @@ const pageTabBtn = (active) => ({
   background: active ? COLORS.calendarRed : "transparent", color: active ? COLORS.paper : COLORS.slate,
   fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 9, fontWeight: 600, cursor: "pointer",
 });
-
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<PanchangamApp />);
-</script>
-</body>
-</html>
