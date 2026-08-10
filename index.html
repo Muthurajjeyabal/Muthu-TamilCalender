@@ -1413,7 +1413,7 @@ function AstrologerPanel({ data, cityKey, today }) {
       <div style={{
         background: COLORS.calendarRed, color: COLORS.paper, textAlign: "center",
         padding: "10px 0", fontFamily: "'Tiro Tamil', serif", fontSize: 15,
-      }}>🔮 ஜோதிடரிடம் கேளுங்கள்</div>
+      }}>🔮 ஜோதிட சிகாமணி</div>
 
       {/* Birth chart status / edit */}
       <div style={{
@@ -1665,6 +1665,11 @@ function PanchangamApp() {
   }, []);
   const [deityPickerOpen, setDeityPickerOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const [astroHintVisible, setAstroHintVisible] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setAstroHintVisible(false), 5000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -1935,6 +1940,28 @@ function PanchangamApp() {
           )}
         </div>
       </div>
+
+      {/* ── Floating astrologer chatbot — always reachable ── */}
+      {view !== "astrologer" && !overlayOpen && (
+        <div style={{ position: "fixed", bottom: 16, left: 16, zIndex: 17, display: "flex", alignItems: "flex-end", gap: 8 }}>
+          <div style={{
+            opacity: astroHintVisible ? 1 : 0, transition: "opacity 0.8s ease", pointerEvents: "none",
+            background: "#fff8ea", border: `1px solid ${COLORS.gold}`, borderRadius: 12, padding: "8px 12px",
+            maxWidth: 170, boxShadow: "0 3px 10px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ fontFamily: "'Tiro Tamil', serif", fontSize: 12, color: COLORS.calendarRed, fontWeight: 700 }}>ஜோதிட சிகாமணி</div>
+            <div style={{ fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 10.5, color: COLORS.ink, marginTop: 2, lineHeight: 1.3 }}>
+              உங்களது அனைத்து சந்தேகங்களுக்கும் ஜோதிடரை கேளுங்கள்
+            </div>
+          </div>
+          <button onClick={() => { setView("astrologer"); setMenuOpen(false); setDeityPickerOpen(false); }} style={{
+            width: 56, height: 56, borderRadius: "50%", flexShrink: 0,
+            background: `linear-gradient(135deg, ${COLORS.calendarRed}, ${COLORS.maroon})`,
+            border: `2px solid ${COLORS.gold}`, color: COLORS.paper, fontSize: 24, cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center",
+          }} aria-label="ஜோதிட சிகாமணி">🔮</button>
+        </div>
+      )}
 
       {/* ── Overlay backdrop ── */}
       {overlayOpen && (
