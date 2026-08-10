@@ -1090,6 +1090,109 @@ function RasiCard({ rasiIndex, doy }) {
   );
 }
 
+const ASTROLOGER_API = "https://muthu-astrologer-api.vercel.app/api/astrologer";
+
+function AstrologerPanel({ data }) {
+  const [messages, setMessages] = useState([
+    { role: "bot", text: "வணக்கம் 🙏 இன்றைய பஞ்சாங்கத்தை வெச்சு உங்க கேள்விக்கு பதில் சொல்றேன். என்ன தெரிஞ்சுக்கணும்?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [messages, loading]);
+
+  const send = async () => {
+    const q = input.trim();
+    if (!q || loading) return;
+    setMessages((m) => [...m, { role: "user", text: q }]);
+    setInput("");
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(ASTROLOGER_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: q,
+          panchangam: {
+            nakName: data.nakName, rasiName: data.rasiName, tithiName: data.tithiName,
+            yogaName: data.yogaName, karanaName: data.karanaName, weekday: WEEKDAY_NAMES[data.weekday],
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setErrorMsg(typeof json.error === "string" ? json.error : "ஏதோ தவறு நடந்தது, மறுபடியும் முயற்சி செய்யுங்க.");
+      } else {
+        setMessages((m) => [...m, { role: "bot", text: json.answer || "பதில் கிடைக்கல." }]);
+      }
+    } catch (e) {
+      setErrorMsg("Server-ஐ அடைய முடியல. Internet connection சரிபார்க்கவும்.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{
+      background: "#fff8ea", borderRadius: 14, border: `1px solid ${COLORS.gold}55`,
+      display: "flex", flexDirection: "column", height: "60vh", overflow: "hidden",
+    }}>
+      <div style={{
+        background: COLORS.calendarRed, color: COLORS.paper, textAlign: "center",
+        padding: "10px 0", fontFamily: "'Tiro Tamil', serif", fontSize: 15,
+      }}>🔮 ஜோதிடரிடம் கேளுங்கள்</div>
+
+      <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{
+            alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+            maxWidth: "82%", background: m.role === "user" ? COLORS.maroon : "#fff",
+            color: m.role === "user" ? COLORS.paper : COLORS.ink,
+            border: m.role === "user" ? "none" : `1px solid ${COLORS.gold}55`,
+            padding: "8px 12px", borderRadius: 14,
+            fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap",
+          }}>{m.text}</div>
+        ))}
+        {loading && (
+          <div style={{
+            alignSelf: "flex-start", fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 13,
+            color: COLORS.slate, fontStyle: "italic",
+          }}>யோசிக்கிறேன்…</div>
+        )}
+        {errorMsg && (
+          <div style={{
+            alignSelf: "center", fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 12,
+            color: COLORS.rust, textAlign: "center",
+          }}>⚠️ {errorMsg}</div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${COLORS.gold}33` }}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+          placeholder="உங்க கேள்வியை தமிழில் கேளுங்க…"
+          style={{
+            flex: 1, padding: "9px 12px", borderRadius: 20, border: `1px solid ${COLORS.gold}`,
+            background: "#fffdf6", color: COLORS.ink, fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 13,
+          }}
+        />
+        <button onClick={send} disabled={loading} style={{
+          padding: "9px 16px", borderRadius: 20, border: "none", background: COLORS.maroon,
+          color: COLORS.paper, fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 13, fontWeight: 600,
+          cursor: loading ? "default" : "pointer", opacity: loading ? 0.6 : 1,
+        }}>அனுப்பு</button>
+      </div>
+    </div>
+  );
+}
+
+
 function SpiritualPanel({ data, date }) {
   const [rasiIndex, setRasiIndex] = useState(0);
   const doy = dayOfYearNum(date);
@@ -1223,6 +1326,12 @@ export default function PanchangamApp() {
   const [deityId, setDeityId] = useState("perumal");
   const [customPhoto, setCustomPhoto] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hintVisible, setHintVisible] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHintVisible(false), 2800);
+    return () => clearTimeout(t);
+  }, []);
   const [deityPickerOpen, setDeityPickerOpen] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -1401,32 +1510,27 @@ export default function PanchangamApp() {
         }}>☰</button>
 
         {showCustomPhoto ? (
-          <>
-            <img src={customPhoto} alt="" style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-            }} />
-            <div style={{
-              position: "absolute", left: 0, right: 0, bottom: 0, height: "40%",
-              background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.6))",
-            }} />
-            <div style={{
-              position: "relative", fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.gold,
-              marginTop: "auto", marginBottom: 12, background: "rgba(0,0,0,0.35)", padding: "4px 12px", borderRadius: 20,
-            }}>
-              தொட்டு படத்தை மாற்றவும்
-            </div>
-          </>
+          <img src={customPhoto} alt="" style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+          }} />
         ) : (
           <>
             <span style={{ fontSize: Math.min(heroH * 0.42, 110), filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.4))" }}>{deity.symbol}</span>
             <div style={{ fontFamily: "'Tiro Tamil', serif", fontSize: 22, color: COLORS.paper, marginTop: 4, fontWeight: 700 }}>
               {deity.name}
             </div>
-            <div style={{ fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.gold, marginTop: 4 }}>
-              தொட்டு படத்தை மாற்றவும்
-            </div>
           </>
         )}
+
+        <div style={{
+          position: "absolute", left: 0, right: 0, bottom: 14, display: "flex", justifyContent: "center",
+          opacity: hintVisible ? 1 : 0, transition: "opacity 0.8s ease", pointerEvents: "none",
+        }}>
+          <span style={{
+            fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.gold,
+            background: "rgba(0,0,0,0.4)", padding: "4px 12px", borderRadius: 20,
+          }}>தொட்டு படத்தை மாற்றவும்</span>
+        </div>
       </div>
 
       {/* ── Content: other half of the screen ── */}
@@ -1446,6 +1550,8 @@ export default function PanchangamApp() {
 
           {view === "reminder" ? (
             <ReminderPanel />
+          ) : view === "astrologer" ? (
+            <AstrologerPanel data={data} />
           ) : view === "spiritual" ? (
             <SpiritualPanel data={data} date={date} />
           ) : view === "month" ? (
@@ -1567,6 +1673,7 @@ export default function PanchangamApp() {
               <button onClick={() => { setView("month"); setMenuOpen(false); }} style={tabBtn(view === "month")}>மாதம்</button>
               <button onClick={() => { setView("reminder"); setMenuOpen(false); }} style={tabBtn(view === "reminder")}>நினைவூட்டல்</button>
               <button onClick={() => { setView("spiritual"); setMenuOpen(false); }} style={tabBtn(view === "spiritual")}>ஆன்மீகம்</button>
+              <button onClick={() => { setView("astrologer"); setMenuOpen(false); }} style={tabBtn(view === "astrologer")}>ஜோதிடர்</button>
             </div>
             {(view === "day" || view === "month") && (
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
