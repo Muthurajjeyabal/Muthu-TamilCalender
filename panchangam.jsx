@@ -95,9 +95,99 @@ function gregorianToHijri(y, m, d) {
   return { year: hYear, month: hMonth, day: hDay };
 }
 
+function gmstDegrees(jd) {
+  const T = (jd - 2451545.0) / 36525;
+  const gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T - (T * T * T) / 38710000;
+  return norm360(gmst);
+}
+
+// Tropical ascendant (Lagnam) longitude, degrees, given Julian Day (UT) and location.
+function ascendantLongitude(jd, lat, lon) {
+  const lst = norm360(gmstDegrees(jd) + lon); // local sidereal time, degrees
+  const ramc = rad(lst);
+  const eps = rad(23.4392911);
+  const phi = rad(lat);
+  const y = -Math.cos(ramc);
+  const x = Math.sin(ramc) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
+  return norm360(deg(Math.atan2(y, x)));
+}
+
+// Low-precision two-body Keplerian planet positions (Paul Schlyter's well-known
+// method) — accurate to well within a degree, plenty for "which rasi" purposes.
+function keplerE(Mdeg, e) {
+  let E = Mdeg + e * deg(1) * Math.sin(rad(Mdeg)) * (1 + e * Math.cos(rad(Mdeg)));
+  for (let i = 0; i < 4; i++) {
+    const dE = (E - e * deg(1) * Math.sin(rad(E)) - Mdeg) / (1 - e * Math.cos(rad(E)));
+    E -= dE;
+  }
+  return E; // degrees
+}
+function heliocentricXYZ(elem) {
+  const E = keplerE(norm360(elem.M), elem.e);
+  const xv = elem.a * (Math.cos(rad(E)) - elem.e);
+  const yv = elem.a * (Math.sqrt(1 - elem.e * elem.e) * Math.sin(rad(E)));
+  const v = deg(Math.atan2(yv, xv));
+  const r = Math.sqrt(xv * xv + yv * yv);
+  const vw = rad(v + elem.w);
+  const N = rad(elem.N), i = rad(elem.i);
+  return {
+    x: r * (Math.cos(N) * Math.cos(vw) - Math.sin(N) * Math.sin(vw) * Math.cos(i)),
+    y: r * (Math.sin(N) * Math.cos(vw) + Math.cos(N) * Math.sin(vw) * Math.cos(i)),
+  };
+}
+function earthElements(d) {
+  return { N: 0, i: 0, w: norm360(282.9404 + 4.70935e-5 * d), a: 1.0, e: 0.016709 - 1.151e-9 * d, M: norm360(356.047 + 0.9856002585 * d) };
+}
+function jupiterElements(d) {
+  return { N: norm360(100.4542 + 2.7685e-5 * d), i: 1.303 - 1.557e-7 * d, w: norm360(273.8777 + 1.645e-5 * d), a: 5.20256, e: 0.048498 + 4.469e-9 * d, M: norm360(19.895 + 0.0830853001 * d) };
+}
+function saturnElements(d) {
+  return { N: norm360(113.6634 + 2.3898e-5 * d), i: 2.4886 - 1.081e-7 * d, w: norm360(339.3939 + 2.9766e-5 * d), a: 9.55475, e: 0.055546 - 9.499e-9 * d, M: norm360(316.967 + 0.0334442282 * d) };
+}
+function sideralPlanetLongitude(elemFn, jd, decimalYear) {
+  const d = jd - 2451543.5;
+  const earth = heliocentricXYZ(earthElements(d));
+  const planet = heliocentricXYZ(elemFn(d));
+  const lon = norm360(deg(Math.atan2(planet.y - earth.y, planet.x - earth.x)));
+  return norm360(lon - lahiriAyanamsa(decimalYear));
+}
+// Current Guru (Jupiter) and Sani (Saturn) rasi, for transit-based readings.
+function currentGrahaRasis(date) {
+  const jd = julianDay(date.getFullYear(), date.getMonth() + 1, date.getDate(), 12);
+  const decimalYear = date.getFullYear() + dayOfYear(date.getFullYear(), date.getMonth() + 1, date.getDate()) / 365.25;
+  const guruLon = sideralPlanetLongitude(jupiterElements, jd, decimalYear);
+  const saniLon = sideralPlanetLongitude(saturnElements, jd, decimalYear);
+  return {
+    guruRasi: RASI_NAMES[Math.floor(guruLon / 30)],
+    saniRasi: RASI_NAMES[Math.floor(saniLon / 30)],
+  };
+}
+
+// Natal chart: Moon rasi/nakshatra + Lagnam (ascendant rasi) at birth.
+function computeNatalChart(y, m, d, hour, minute, lat, lon, tzOffset) {
+  const hourLocal = hour + minute / 60;
+  const jd = julianDay(y, m, d, hourLocal - tzOffset);
+  const T = (jd - 2451545.0) / 36525;
+  const moonLong = moonLongitude(T);
+  const decimalYear = y + dayOfYear(y, m, d) / 365.25;
+  const ayanamsa = lahiriAyanamsa(decimalYear);
+  const siderealMoon = norm360(moonLong - ayanamsa);
+  const nakIndex = Math.floor(siderealMoon / (360 / 27));
+  const rasiIndex = Math.floor(siderealMoon / 30);
+
+  const ascTropical = ascendantLongitude(jd, lat, lon);
+  const ascSidereal = norm360(ascTropical - ayanamsa);
+  const lagnamIndex = Math.floor(ascSidereal / 30);
+
+  return {
+    rasiName: RASI_NAMES[rasiIndex],
+    nakName: NAKSHATRA_NAMES[nakIndex],
+    lagnamName: RASI_NAMES[lagnamIndex],
+  };
+}
+
 // Standard NOAA-style approximate sunrise/sunset calculator
-function sunriseSunset(y, m, d, lat, lon, utcOffsetHours) {
-  const N = dayOfYear(y, m, d);
+function sunriseSunset(y, m, d, lat, lon, utcOffsetHours) {  const N = dayOfYear(y, m, d);
   const B = rad((360 / 365) * (N - 81));
   const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B); // minutes
   const decl = rad(23.45 * Math.sin(rad((360 * (284 + N)) / 365)));
@@ -630,6 +720,51 @@ function computePanchangam(date, cityKey) {
   };
 }
 
+// Commonly published "good day" criteria for muhurtham-style events. These are
+// widely cited general rules (rikta tithis and amavasai avoided everywhere;
+// a standard set of nakshatras considered auspicious) — not a substitute for
+// a family priest/astrologer, who also checks the couple's chart compatibility
+// (porutham), which this cannot do since it only has one person's chart.
+const MUHURTHAM_GOOD_NAKSHATRAS = {
+  marriage: ["ரோகிணி", "மிருகசீரிடம்", "மகம்", "உத்திரம்", "ஹஸ்தம்", "சுவாதி", "அனுஷம்", "மூலம்", "உத்திராடம்", "திருவோணம்", "உத்திரட்டாதி", "ரேவதி"],
+  housewarming: ["ரோகிணி", "மிருகசீரிடம்", "உத்திரம்", "ஹஸ்தம்", "சித்திரை", "சுவாதி", "அனுஷம்", "மூலம்", "உத்திராடம்", "திருவோணம்", "உத்திரட்டாதி", "ரேவதி"],
+};
+const MUHURTHAM_AVOID_MONTHS = { marriage: ["ஆடி", "மார்கழி"], housewarming: ["ஆடி"] };
+
+function isGoodMuhurthamDay(data, purpose) {
+  const goodNak = MUHURTHAM_GOOD_NAKSHATRAS[purpose] || MUHURTHAM_GOOD_NAKSHATRAS.marriage;
+  const avoidMonths = MUHURTHAM_AVOID_MONTHS[purpose] || [];
+  if (!goodNak.includes(data.nakName)) return false;
+  if (avoidMonths.includes(data.tamilMonth)) return false;
+  if (data.tithiName === "அமாவாசை") return false;
+  // rikta tithis (4th, 9th, 14th of either paksha) are avoided for all good deeds
+  const riktaNames = ["சதுர்த்தி", "நவமி", "சதுர்தசி"];
+  if (riktaNames.includes(data.tithiName)) return false;
+  if (data.special.some((s) => s.includes("விரதம்") || s.includes("சதுர்த்தி"))) return false;
+  return true;
+}
+
+// Scans forward from a start date and returns the next `count` good days for
+// the given purpose ("marriage" | "housewarming").
+function findMuhurthamDays(startDate, cityKey, purpose, count) {
+  const results = [];
+  const d = new Date(startDate);
+  d.setDate(d.getDate() + 1); // start from tomorrow
+  let guard = 0;
+  while (results.length < count && guard < 400) {
+    const data = computePanchangam(d, cityKey);
+    if (isGoodMuhurthamDay(data, purpose)) {
+      results.push({
+        date: new Date(d), weekday: WEEKDAY_NAMES[data.weekday],
+        tamilMonth: data.tamilMonth, tamilDay: data.tamilDay, nakName: data.nakName, tithiName: data.tithiName,
+      });
+    }
+    d.setDate(d.getDate() + 1);
+    guard++;
+  }
+  return results;
+}
+
 /* ---------------------------------------------------------------
    UI
 ------------------------------------------------------------------*/
@@ -1092,24 +1227,55 @@ function RasiCard({ rasiIndex, doy }) {
 
 const ASTROLOGER_API = "https://muthu-astrologer-api.vercel.app/api/astrologer";
 
-function AstrologerPanel({ data }) {
+function AstrologerPanel({ data, cityKey, today }) {
   const [messages, setMessages] = useState([
-    { role: "bot", text: "வணக்கம் 🙏 இன்றைய பஞ்சாங்கத்தை வெச்சு உங்க கேள்விக்கு பதில் சொல்றேன். என்ன தெரிஞ்சுக்கணும்?" },
+    { role: "bot", text: "வணக்கம் 🙏 உங்க ராசி/நட்சத்திரம்/லக்னம் தந்தா, அதை வெச்சே சரியான ஜோதிடம் சொல்றேன். கீழே 'சேர்' பட்டனை தட்டி பிறந்த விவரத்தை பதிவு செய்யுங்க." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const listRef = useRef(null);
 
+  const [birth, setBirth] = useState(null); // { name, date, time, cityKey }
+  const [birthLoaded, setBirthLoaded] = useState(false);
+  const [showBirthForm, setShowBirthForm] = useState(false);
+  const [bName, setBName] = useState("");
+  const [bDate, setBDate] = useState("");
+  const [bTime, setBTime] = useState("06:00");
+  const [bCity, setBCity] = useState("madurai");
+
+  useEffect(() => {
+    (async () => {
+      const v = await storageGet("birthDetails");
+      if (v) {
+        try {
+          const parsed = JSON.parse(v);
+          setBirth(parsed);
+          setBName(parsed.name || ""); setBDate(parsed.date); setBTime(parsed.time); setBCity(parsed.cityKey);
+        } catch (e) { /* corrupt data, ignore */ }
+      }
+      setBirthLoaded(true);
+    })();
+  }, []);
+
+  const jathagam = useMemo(() => {
+    if (!birth || !birth.date) return null;
+    const [y, m, d] = birth.date.split("-").map(Number);
+    const [hh, mm] = birth.time.split(":").map(Number);
+    const city = CITIES[birth.cityKey] || CITIES.madurai;
+    if (!y || !m || !d) return null;
+    return computeNatalChart(y, m, d, hh, mm, city.lat, city.lon, city.tz);
+  }, [birth]);
+
+  const grahaRasis = useMemo(() => currentGrahaRasis(new Date()), []);
+
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, loading]);
 
-  const send = async () => {
-    const q = input.trim();
+  const askQuestion = async (q, jathagamOverride) => {
     if (!q || loading) return;
     setMessages((m) => [...m, { role: "user", text: q }]);
-    setInput("");
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -1121,14 +1287,18 @@ function AstrologerPanel({ data }) {
           panchangam: {
             nakName: data.nakName, rasiName: data.rasiName, tithiName: data.tithiName,
             yogaName: data.yogaName, karanaName: data.karanaName, weekday: WEEKDAY_NAMES[data.weekday],
+            guruRasi: grahaRasis.guruRasi, saniRasi: grahaRasis.saniRasi,
           },
+          jathagam: jathagamOverride !== undefined ? jathagamOverride : (jathagam || undefined),
+          name: birth && birth.name ? birth.name : undefined,
         }),
       });
       const json = await res.json();
       if (!res.ok || json.error) {
         setErrorMsg(typeof json.error === "string" ? json.error : "ஏதோ தவறு நடந்தது, மறுபடியும் முயற்சி செய்யுங்க.");
       } else {
-        setMessages((m) => [...m, { role: "bot", text: json.answer || "பதில் கிடைக்கல." }]);
+        const clean = (json.answer || "பதில் கிடைக்கல.").replace(/\*\*/g, "").replace(/\*/g, "");
+        setMessages((m) => [...m, { role: "bot", text: clean }]);
       }
     } catch (e) {
       setErrorMsg("Server-ஐ அடைய முடியல. Internet connection சரிபார்க்கவும்.");
@@ -1136,17 +1306,122 @@ function AstrologerPanel({ data }) {
     setLoading(false);
   };
 
+  const saveBirth = async () => {
+    if (!bDate || !bName.trim()) return;
+    const details = { name: bName.trim(), date: bDate, time: bTime, cityKey: bCity };
+    setBirth(details);
+    setShowBirthForm(false);
+    await storageSet("birthDetails", JSON.stringify(details));
+    const [y, m, d] = bDate.split("-").map(Number);
+    const [hh, mm] = bTime.split(":").map(Number);
+    const city = CITIES[bCity] || CITIES.madurai;
+    const freshJathagam = computeNatalChart(y, m, d, hh, mm, city.lat, city.lon, city.tz);
+    askQuestion(
+      `என் பேர் ${details.name}. என் முழு ஜாதகத்தையும் சொல்லுங்க — என் ராசி, நட்சத்திரம், லக்னம் என்ன, இப்போ குரு பகவானும் சனி பகவானும் எந்த ராசியில் இருக்காங்க, அதனால எனக்கு என்ன நன்மை/தீமைகள் வரும், இந்த வாரம், இந்த மாசம், இந்த வருஷம் பொதுவா எப்படி இருக்கும்னு விரிவா சொல்லுங்க.`,
+      freshJathagam
+    );
+  };
+
+  const send = () => {
+    const q = input.trim();
+    if (!q) return;
+    setInput("");
+    askQuestion(q);
+  };
+
+  const showMuhurthamDays = (purpose, label) => {
+    const days = findMuhurthamDays(today, cityKey, purpose, 5);
+    setMessages((m) => [...m, { role: "user", text: `அடுத்து வரும் ${label} நாட்கள்` }]);
+    if (days.length === 0) {
+      setMessages((m) => [...m, { role: "bot", text: "அடுத்த சில மாதங்களில் பொருத்தமான நாள் கிடைக்கல. மன்னிக்கவும்." }]);
+      return;
+    }
+    const lines = days.map((d) =>
+      `📅 ${d.date.toLocaleDateString("ta-IN", { day: "numeric", month: "long", year: "numeric" })} (${d.weekday}கிழமை) — ${d.tamilMonth} ${d.tamilDay}, ${d.nakName} நட்சத்திரம், ${d.tithiName} திதி`
+    ).join("\n");
+    setMessages((m) => [...m, {
+      role: "bot",
+      text: `இதோ அடுத்து வரும் ${label} நாட்கள்:\n\n${lines}\n\n⚠️ இது நட்சத்திரம்/திதி அடிப்படையிலான பொதுவான கணக்கீடு. திருமணத்துக்கு இருவரின் ஜாதக பொருத்தமும், முக்கிய நாட்களுக்கு குடும்ப புரோகிதரின் ஆலோசனையும் கண்டிப்பா பெறவும்.`,
+    }]);
+  };
+
+  const [paalDate, setPaalDate] = useState("");
+  const [showPaalPicker, setShowPaalPicker] = useState(false);
+
+  const showPaalKaachalTime = () => {
+    if (!paalDate) return;
+    const [y, m, d] = paalDate.split("-").map(Number);
+    const target = new Date(y, m - 1, d);
+    const pd = computePanchangam(target, cityKey);
+    setShowPaalPicker(false);
+    const dateLabel = target.toLocaleDateString("ta-IN", { day: "numeric", month: "long", year: "numeric" });
+    setMessages((m) => [...m, { role: "user", text: `${dateLabel} — பால் காய்ச்ச நல்ல நேரம்` }]);
+    setMessages((m) => [...m, {
+      role: "bot",
+      text: `${dateLabel} (${WEEKDAY_NAMES[pd.weekday]}கிழமை) — பால் காய்ச்ச நல்ல நேரம்:\n\n` +
+        `✅ நல்ல நேரம் (அபிஜித் முகூர்த்தம்): ${hoursToClock(pd.abhijit[0])} முதல் ${hoursToClock(pd.abhijit[1])} வரை\n\n` +
+        `இந்த நேரங்களை தவிர்க்கவும்:\n` +
+        `❌ ராகு காலம்: ${hoursToClock(pd.rahu[0])} – ${hoursToClock(pd.rahu[1])}\n` +
+        `❌ எமகண்டம்: ${hoursToClock(pd.yama[0])} – ${hoursToClock(pd.yama[1])}\n` +
+        `❌ குளிகை: ${hoursToClock(pd.kuligai[0])} – ${hoursToClock(pd.kuligai[1])}\n\n` +
+        `மேலே சொன்ன "நல்ல நேரம்" சரியான நேரம் — இதுல பால் காய்ச்சி, குடும்பம் நல்லா வளர்ச்சி பெற்று வாழ்க!`,
+    }]);
+  };
+
   return (
     <div style={{
       background: "#fff8ea", borderRadius: 14, border: `1px solid ${COLORS.gold}55`,
-      display: "flex", flexDirection: "column", height: "60vh", overflow: "hidden",
+      display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
       <div style={{
         background: COLORS.calendarRed, color: COLORS.paper, textAlign: "center",
         padding: "10px 0", fontFamily: "'Tiro Tamil', serif", fontSize: 15,
       }}>🔮 ஜோதிடரிடம் கேளுங்கள்</div>
 
-      <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Birth chart status / edit */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 14px", borderBottom: `1px solid ${COLORS.gold}33`,
+        fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11.5,
+      }}>
+        {jathagam ? (
+          <span style={{ color: COLORS.ink }}>
+            📜 {birth && birth.name ? `${birth.name} — ` : ""}ராசி: <b>{jathagam.rasiName}</b> · நட்சத்திரம்: <b>{jathagam.nakName}</b> · லக்னம்: <b>{jathagam.lagnamName}</b>
+          </span>
+        ) : (
+          <span style={{ color: COLORS.slate }}>ஜாதக விவரம் இன்னும் சேர்க்கல்</span>
+        )}
+        <button onClick={() => setShowBirthForm((v) => !v)} style={{
+          background: "transparent", border: `1px solid ${COLORS.gold}`, borderRadius: 12,
+          padding: "3px 10px", color: COLORS.maroon, fontSize: 11, fontFamily: "'Noto Sans Tamil', sans-serif",
+          cursor: "pointer", flexShrink: 0, marginLeft: 8,
+        }}>{jathagam ? "மாற்று" : "சேர்"}</button>
+      </div>
+      <div style={{
+        padding: "5px 14px", borderBottom: `1px solid ${COLORS.gold}33`,
+        fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 10.5, color: COLORS.slate,
+      }}>
+        🪐 குரு: <b style={{ color: COLORS.ink }}>{grahaRasis.guruRasi}</b> ராசியில் · சனி: <b style={{ color: COLORS.ink }}>{grahaRasis.saniRasi}</b> ராசியில்
+      </div>
+
+      {showBirthForm && (
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${COLORS.gold}33`, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.slate }}>
+            பேர், பிறந்த தேதி, நேரம், ஊர் தந்தால் — ராசி/நட்சத்திரம்/லக்னம் கணக்கிட்டு, அதை வெச்சே தனிப்பட்ட பதில் தருவேன்.
+          </div>
+          <input type="text" placeholder="பேர்" value={bName} onChange={(e) => setBName(e.target.value)} style={inputStyle} />
+          <input type="date" value={bDate} onChange={(e) => setBDate(e.target.value)} style={inputStyle} />
+          <input type="time" value={bTime} onChange={(e) => setBTime(e.target.value)} style={inputStyle} />
+          <select value={bCity} onChange={(e) => setBCity(e.target.value)} style={inputStyle}>
+            {Object.entries(CITIES).map(([k, c]) => (
+              <option key={k} value={k}>{c.label}</option>
+            ))}
+          </select>
+          <button onClick={saveBirth} style={{ ...navBtn, width: "100%", padding: "9px 0" }}>சேமி</button>
+        </div>
+      )}
+
+      <div ref={listRef} style={{ flex: 1, minHeight: "40vh", maxHeight: "55vh", overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.map((m, i) => (
           <div key={i} style={{
             alignSelf: m.role === "user" ? "flex-end" : "flex-start",
@@ -1171,7 +1446,20 @@ function AstrologerPanel({ data }) {
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${COLORS.gold}33` }}>
+      <div style={{ display: "flex", gap: 6, padding: "8px 12px 0", borderTop: `1px solid ${COLORS.gold}33` }}>
+        <button onClick={() => showMuhurthamDays("marriage", "கல்யாண முகூர்த்த")} style={quickBtn}>💍 திருமண நாள்</button>
+        <button onClick={() => showMuhurthamDays("housewarming", "கிரகப்பிரவேச/வாஸ்து")} style={quickBtn}>🏠 வாஸ்து நாள்</button>
+        <button onClick={() => setShowPaalPicker((v) => !v)} style={quickBtn}>🥛 பால் காய்ச்சல்</button>
+      </div>
+
+      {showPaalPicker && (
+        <div style={{ display: "flex", gap: 6, padding: "8px 12px 0", alignItems: "center" }}>
+          <input type="date" value={paalDate} onChange={(e) => setPaalDate(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+          <button onClick={showPaalKaachalTime} style={{ ...navBtn, padding: "8px 14px" }}>காட்டு</button>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8, padding: "8px 12px 10px" }}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -1191,6 +1479,12 @@ function AstrologerPanel({ data }) {
     </div>
   );
 }
+
+const quickBtn = {
+  flex: 1, padding: "7px 4px", borderRadius: 16, border: `1px solid ${COLORS.gold}`,
+  background: "transparent", color: COLORS.maroon, fontFamily: "'Noto Sans Tamil', sans-serif",
+  fontSize: 11.5, fontWeight: 600, cursor: "pointer",
+};
 
 
 function SpiritualPanel({ data, date }) {
@@ -1551,7 +1845,7 @@ export default function PanchangamApp() {
           {view === "reminder" ? (
             <ReminderPanel />
           ) : view === "astrologer" ? (
-            <AstrologerPanel data={data} />
+            <AstrologerPanel data={data} cityKey={cityKey} today={date} />
           ) : view === "spiritual" ? (
             <SpiritualPanel data={data} date={date} />
           ) : view === "month" ? (
