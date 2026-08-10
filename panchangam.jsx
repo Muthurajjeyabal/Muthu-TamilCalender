@@ -1252,6 +1252,12 @@ function AstrologerPanel({ data, cityKey, today }) {
           const parsed = JSON.parse(v);
           setBirth(parsed);
           setBName(parsed.name || ""); setBDate(parsed.date); setBTime(parsed.time); setBCity(parsed.cityKey);
+          if (parsed.name) {
+            setMessages([{
+              role: "bot",
+              text: `வணக்கம் ${parsed.name}, இன்னைக்கு என்ன விஷயமா வந்திருக்கீங்க? எல்லாம் வல்ல இறைவனை வேண்டுகிறேன், நீங்க நல்லா இருக்கணும். என்ன தகவல் உங்களுக்கு வேணும்?`,
+            }]);
+          }
         } catch (e) { /* corrupt data, ignore */ }
       }
       setBirthLoaded(true);
