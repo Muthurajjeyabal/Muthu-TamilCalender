@@ -1621,7 +1621,7 @@ function SpiritualPanel({ data, date }) {
   );
 }
 
-function MonthGrid({ year, month, cityKey, onPick, selected }) {
+function MonthGrid({ year, month, cityKey, onPick, selected, onPrev, onNext }) {
   const monthData = useMemo(() => {
     const firstDay = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1640,8 +1640,12 @@ function MonthGrid({ year, month, cityKey, onPick, selected }) {
 
   return (
     <div>
-      <div style={{ textAlign: "center", fontFamily: "'Tiro Tamil', serif", color: COLORS.maroon, fontSize: 17, marginBottom: 10 }}>
-        {monthLabel}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <button onClick={onPrev} style={monthNavBtn}>◀</button>
+        <div style={{ fontFamily: "'Tiro Tamil', serif", color: COLORS.maroon, fontSize: 17 }}>
+          {monthLabel}
+        </div>
+        <button onClick={onNext} style={monthNavBtn}>▶</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
         {WEEKDAY_SHORT.map((w) => (
@@ -1937,6 +1941,8 @@ function PanchangamApp() {
                 year={date.getFullYear()} month={date.getMonth()} cityKey={cityKey}
                 selected={date}
                 onPick={(d) => { setDate(d); setView("day"); }}
+                onPrev={() => shiftMonth(-1)}
+                onNext={() => shiftMonth(1)}
               />
             </div>
           ) : (
@@ -2106,6 +2112,12 @@ const navBtn = {
   padding: "8px 12px", borderRadius: 8, border: `1px solid ${COLORS.gold}`,
   background: COLORS.maroon, color: COLORS.parchment, fontFamily: "'Noto Sans Tamil', sans-serif",
   fontSize: 13, cursor: "pointer",
+};
+
+const monthNavBtn = {
+  padding: "6px 14px", borderRadius: 8, border: `1px solid ${COLORS.gold}`,
+  background: COLORS.maroon, color: COLORS.parchment, fontFamily: "'Noto Sans Tamil', sans-serif",
+  fontSize: 14, cursor: "pointer",
 };
 
 const tabBtn = (active) => ({
