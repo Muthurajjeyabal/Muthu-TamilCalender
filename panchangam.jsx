@@ -831,8 +831,8 @@ function TimeTag({ color, label, time }) {
 const DEITIES = [
   { id: "perumal", name: "பெருமாள்", symbol: "🐚", color: "#B7950B" },
   { id: "shiva", name: "சிவன்", symbol: "🔱", color: "#5D6D7E" },
-  { id: "murugan", name: "முருகன்", symbol: "🦚", color: "#1E8449", image: "images/murugan.jpg" },
-  { id: "ganesha", name: "விநாயகர்", symbol: "🐘", color: "#C0392B", image: "images/ganesha.png" },
+  { id: "murugan", name: "முருகன்", symbol: "🦚", color: "#1E8449", image: "murugan.jpg" },
+  { id: "ganesha", name: "விநாயகர்", symbol: "🐘", color: "#C0392B", image: "ganesha.png" },
   { id: "amman", name: "அம்மன்", symbol: "🪷", color: "#C2185B" },
   { id: "lakshmi", name: "லட்சுமி", symbol: "🪙", color: "#D4AC0D" },
   { id: "saraswathi", name: "சரஸ்வதி", symbol: "🦢", color: "#7D3C98" },
@@ -841,10 +841,10 @@ const DEITIES = [
   { id: "hanuman", name: "ஆஞ்சநேயர்", symbol: "🐒", color: "#D35400" },
   { id: "ayyappan", name: "ஐயப்பன்", symbol: "🐅", color: "#34495E" },
   { id: "durga", name: "துர்கை", symbol: "🦁", color: "#922B21" },
-  { id: "jesus", name: "இயேசு நாதர்", symbol: "✝️", color: "#2C4870", image: "images/jesus.jpg" },
-  { id: "mary", name: "அன்னை மரியாள்", symbol: "🕊️", color: "#3A5F8A", image: "images/mary.jpg" },
-  { id: "allah1", name: "அல்லாஹ்", symbol: "☪️", color: "#8B6F1E", image: "images/allah1.jpg" },
-  { id: "allah2", name: "அல்லாஹ் ரஹ்மான்", symbol: "☪️", color: "#1E6B4F", image: "images/allah2.jpg" },
+  { id: "jesus", name: "இயேசு நாதர்", symbol: "✝️", color: "#2C4870", image: "jesus.jpg" },
+  { id: "mary", name: "அன்னை மரியாள்", symbol: "🕊️", color: "#3A5F8A", image: "mary.jpg" },
+  { id: "allah1", name: "அல்லாஹ்", symbol: "☪️", color: "#8B6F1E", image: "allah1.jpg" },
+  { id: "allah2", name: "அல்லாஹ் ரஹ்மான்", symbol: "☪️", color: "#1E6B4F", image: "allah2.jpg" },
 ];
 const DEITY_MAP = Object.fromEntries(DEITIES.map((d) => [d.id, d]));
 
@@ -1653,6 +1653,11 @@ export default function PanchangamApp() {
     const t = setTimeout(() => setHintVisible(false), 2800);
     return () => clearTimeout(t);
   }, []);
+  const [swipeHintVisible, setSwipeHintVisible] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setSwipeHintVisible(false), 3500);
+    return () => clearTimeout(t);
+  }, []);
   const [deityPickerOpen, setDeityPickerOpen] = useState(false);
   const fileInputRef = useRef(null);
   const [astroHintVisible, setAstroHintVisible] = useState(true);
@@ -1933,6 +1938,16 @@ export default function PanchangamApp() {
                 aria-label="வால்பேப்பர்"
               >🖼️</button>
               <TearCalendarPage data={data} date={date} />
+              <div style={{
+                position: "absolute", top: 6, left: 0, right: 0, zIndex: 14, display: "flex", justifyContent: "center",
+                opacity: swipeHintVisible ? 1 : 0, transition: "opacity 0.9s ease", pointerEvents: "none",
+              }}>
+                <span style={{
+                  fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 10.5, color: COLORS.paper,
+                  background: "rgba(74,18,21,0.85)", padding: "4px 12px", borderRadius: 20,
+                  border: `1px solid ${COLORS.gold}`,
+                }}>👉 ஸ்வைப் பண்ணி அடுத்த தேதிக்கு போகலாம்</span>
+              </div>
               {tearOverlay && (
                 <div style={{
                   position: "absolute", inset: 0, zIndex: 15, pointerEvents: "none",
