@@ -1,9 +1,15 @@
-const CACHE_NAME = "muthu-calendar-v1";
+const CACHE_NAME = "muthu-calendar-v2";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon.svg",
+  "./images/murugan.jpg",
+  "./images/ganesha.png",
+  "./images/jesus.jpg",
+  "./images/mary.jpg",
+  "./images/allah1.jpg",
+  "./images/allah2.jpg",
   "https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js",
   "https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js",
   "https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js",

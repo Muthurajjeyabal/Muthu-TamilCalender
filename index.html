@@ -510,6 +510,19 @@ async function saveAsWallpaper(data, date, deity, customPhoto) {
     } catch (e) {
       ctx.fillStyle = COLORS.maroon; ctx.fillRect(0, 0, W, heroH);
     }
+  } else if (deity.image) {
+    try {
+      const img = await loadImageEl(deity.image);
+      drawImageCover(ctx, img, 0, 0, W, heroH);
+      const fade = ctx.createLinearGradient(0, heroH - 160, 0, heroH);
+      fade.addColorStop(0, "rgba(0,0,0,0)");
+      fade.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = fade; ctx.fillRect(0, heroH - 160, W, 160);
+      ctx.fillStyle = COLORS.paper; ctx.font = "600 42px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(deity.name, W / 2, heroH - 30);
+    } catch (e) {
+      ctx.fillStyle = COLORS.maroon; ctx.fillRect(0, 0, W, heroH);
+    }
   } else {
     const grad = ctx.createRadialGradient(W / 2, heroH * 0.4, 40, W / 2, heroH * 0.4, W * 0.75);
     grad.addColorStop(0, deity.color);
@@ -855,8 +868,8 @@ function TimeTag({ color, label, time }) {
 const DEITIES = [
   { id: "perumal", name: "பெருமாள்", symbol: "🐚", color: "#B7950B" },
   { id: "shiva", name: "சிவன்", symbol: "🔱", color: "#5D6D7E" },
-  { id: "murugan", name: "முருகன்", symbol: "🦚", color: "#1E8449" },
-  { id: "ganesha", name: "விநாயகர்", symbol: "🐘", color: "#C0392B" },
+  { id: "murugan", name: "முருகன்", symbol: "🦚", color: "#1E8449", image: "images/murugan.jpg" },
+  { id: "ganesha", name: "விநாயகர்", symbol: "🐘", color: "#C0392B", image: "images/ganesha.png" },
   { id: "amman", name: "அம்மன்", symbol: "🪷", color: "#C2185B" },
   { id: "lakshmi", name: "லட்சுமி", symbol: "🪙", color: "#D4AC0D" },
   { id: "saraswathi", name: "சரஸ்வதி", symbol: "🦢", color: "#7D3C98" },
@@ -865,6 +878,10 @@ const DEITIES = [
   { id: "hanuman", name: "ஆஞ்சநேயர்", symbol: "🐒", color: "#D35400" },
   { id: "ayyappan", name: "ஐயப்பன்", symbol: "🐅", color: "#34495E" },
   { id: "durga", name: "துர்கை", symbol: "🦁", color: "#922B21" },
+  { id: "jesus", name: "இயேசு நாதர்", symbol: "✝️", color: "#2C4870", image: "images/jesus.jpg" },
+  { id: "mary", name: "அன்னை மரியாள்", symbol: "🕊️", color: "#3A5F8A", image: "images/mary.jpg" },
+  { id: "allah1", name: "அல்லாஹ்", symbol: "☪️", color: "#8B6F1E", image: "images/allah1.jpg" },
+  { id: "allah2", name: "அல்லாஹ் ரஹ்மான்", symbol: "☪️", color: "#1E6B4F", image: "images/allah2.jpg" },
 ];
 const DEITY_MAP = Object.fromEntries(DEITIES.map((d) => [d.id, d]));
 
@@ -876,10 +893,10 @@ function DeityBadge({ deity, size = 48, selected, onClick }) {
     }}>
       <span style={{
         width: size, height: size, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-        background: `radial-gradient(circle at 35% 30%, ${deity.color}dd, ${deity.color})`,
+        background: deity.image ? `center/cover url(${deity.image})` : `radial-gradient(circle at 35% 30%, ${deity.color}dd, ${deity.color})`,
         fontSize: size * 0.5, border: selected ? `3px solid ${COLORS.calendarRed}` : `2px solid ${COLORS.paper}`,
         boxShadow: selected ? "0 0 0 2px " + COLORS.gold : "0 1px 4px rgba(0,0,0,0.25)",
-      }}>{deity.symbol}</span>
+      }}>{!deity.image && deity.symbol}</span>
       <span style={{
         fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 10, color: COLORS.ink,
         fontWeight: selected ? 700 : 500, whiteSpace: "nowrap",
@@ -1855,6 +1872,20 @@ function PanchangamApp() {
           <img src={customPhoto} alt="" style={{
             position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
           }} />
+        ) : deity.image ? (
+          <>
+            <img src={deity.image} alt="" style={{
+              position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+            }} />
+            <div style={{
+              position: "absolute", left: 0, right: 0, bottom: 0, height: "34%",
+              background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.55))",
+            }} />
+            <div style={{
+              position: "relative", fontFamily: "'Tiro Tamil', serif", fontSize: 20, color: COLORS.paper,
+              fontWeight: 700, textShadow: "0 2px 6px rgba(0,0,0,0.6)", marginTop: "auto", marginBottom: 44,
+            }}>{deity.name}</div>
+          </>
         ) : (
           <>
             <span style={{ fontSize: Math.min(heroH * 0.42, 110), filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.4))" }}>{deity.symbol}</span>
