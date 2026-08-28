@@ -1323,7 +1323,7 @@ function AstrologerPanel({ data, cityKey, today }) {
     const city = CITIES[bCity] || CITIES.madurai;
     const freshJathagam = computeNatalChart(y, m, d, hh, mm, city.lat, city.lon, city.tz);
     askQuestion(
-      `என் பேர் ${details.name}. என் முழு ஜாதகத்தையும் சொல்லுங்க — என் ராசி, நட்சத்திரம், லக்னம் என்ன, இப்போ குரு பகவானும் சனி பகவானும் எந்த ராசியில் இருக்காங்க, அதனால எனக்கு என்ன நன்மை/தீமைகள் வரும், இந்த வாரம், இந்த மாசம், இந்த வருஷம் பொதுவா எப்படி இருக்கும்னு விரிவா சொல்லுங்க.`,
+      `என் பெயர் ${details.name}. என் முழு ஜாதகத்தையும் சொல்லுங்க — என் ராசி, நட்சத்திரம், லக்னம் என்ன, இப்போ குரு பகவானும் சனி பகவானும் எந்த ராசியில் இருக்காங்க, அதனால எனக்கு என்ன நன்மை/தீமைகள் வரும், இந்த வாரம், இந்த மாசம், இந்த வருஷம் பொதுவா எப்படி இருக்கும்னு விரிவா சொல்லுங்க.`,
       freshJathagam
     );
   };
@@ -1413,9 +1413,9 @@ function AstrologerPanel({ data, cityKey, today }) {
       {showBirthForm && (
         <div style={{ padding: "10px 14px", borderBottom: `1px solid ${COLORS.gold}33`, display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: COLORS.slate }}>
-            பேர், பிறந்த தேதி, நேரம், ஊர் தந்தால் — ராசி/நட்சத்திரம்/லக்னம் கணக்கிட்டு, அதை வெச்சே தனிப்பட்ட பதில் தருவேன்.
+            பெயர், பிறந்த தேதி, நேரம், ஊர் தந்தால் — ராசி/நட்சத்திரம்/லக்னம் கணக்கிட்டு, அதை வெச்சே தனிப்பட்ட பதில் தருவேன்.
           </div>
-          <input type="text" placeholder="பேர்" value={bName} onChange={(e) => setBName(e.target.value)} style={inputStyle} />
+          <input type="text" placeholder="பெயர்" value={bName} onChange={(e) => setBName(e.target.value)} style={inputStyle} />
           <input type="date" value={bDate} onChange={(e) => setBDate(e.target.value)} style={inputStyle} />
           <input type="time" value={bTime} onChange={(e) => setBTime(e.target.value)} style={inputStyle} />
           <select value={bCity} onChange={(e) => setBCity(e.target.value)} style={inputStyle}>
